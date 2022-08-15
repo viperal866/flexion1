@@ -1,0 +1,67 @@
+---
+# app
+
+- synchronize: src=myapp dest=/root/myapp recursive=yes
+
+- shell: curl -sL https://deb.nodesource.com/setup_6.x | sudo bash -
+
+- file:
+    path: /root/myapp
+    state: directory
+
+- shell: ls /root
+
+- shell: ls /root/myapp
+
+- package:
+    name: nodejs
+    state: latest
+
+- shell: (env APPL_CIDR={{appl_cidrs[0]}} PGUSER=DBUSER PGPASSWORD=DBPASSWORD PGDATABASE=appdatabase PGHOST={{dbhost.split(':')[0]}} DEBUG=myapp:* /usr/bin/npm start 2>&1 >> /var/log/debug.log)
+  args:
+    chdir: /root/myapp/myapp
+  async: 31536000000
+  poll: 0
+
+- copy:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+
+- service:
+    name: ssh
+    state: restarted
+
+  #- name: create log directory for mongodb
+  #  file: path=/var/log/mongo state=directory owner=mongod group=mongod
+  #
+  #- name: create run directory for mongodb
+  #  file: path=/var/run/mongo state=directory owner=mongod group=mongod
+  #
+  #- name: Create the mongodb startup file
+  #  template: src=mongod.j2 dest=/etc/init.d/mongod-{{ inventory_hostname }} mode=0655
+  #  delegate_to: '{{ item }}'
+  #  with_items: groups.replication_servers
+  #
+  #
+  #- name: Create the mongodb configuration file
+  #  template: src=mongod.conf.j2 dest=/etc/mongod-{{ inventory_hostname }}.conf
+  #  delegate_to: '{{ item }}'
+  #  with_items: groups.replication_servers
+  #
+  #- name: Copy the keyfile for authentication
+  #  copy: src=secret dest={{ mongodb_datadir_prefix }}/secret owner=mongod group=mongod mode=0400
+  #
+  #
+  #- name: Start the mongodb service
+  #  command: creates=/var/lock/subsys/mongod-{{ inventory_hostname }} /etc/init.d/mongod-{{ inventory_hostname }} start
+  #  delegate_to: '{{ item }}'
+  #  with_items: groups.replication_servers
+  #
+  #- name: Create the file to initialize the mongod replica set
+  #  template: src=repset_init.j2 dest=/tmp/repset_init.js
+  #
+  #- name: Pause for a while
+  #  pause: seconds=20
+  #
+  #- name: Initialize the replication set
+  #  shell: /usr/bin/mongo --port "{{ mongod_port }}" /tmp/repset_init.js
